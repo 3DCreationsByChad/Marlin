@@ -19,7 +19,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-
 #pragma once
 
 //
@@ -225,7 +224,7 @@
 
 #define SPI_FLASH
 #if ENABLED(SPI_FLASH)
-  #define HAS_SPI_FLASH                        1
+  #define SPI_FLASH
   #define SPI_DEVICE                           2
   #define SPI_FLASH_SIZE               0x1000000
   #define SPI_FLASH_CS_PIN                  PB12

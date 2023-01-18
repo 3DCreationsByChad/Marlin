@@ -36,6 +36,21 @@
   #define FYSETC_MINI_12864_2_1
 #endif
 
+// Old settings are now conditional on DGUS_LCD_UI
+#if DGUS_UI_IS(ORIGIN)
+  #define DGUS_LCD_UI_ORIGIN 1
+#elif DGUS_UI_IS(FYSETC)
+  #define DGUS_LCD_UI_FYSETC 1
+#elif DGUS_UI_IS(HIPRECY)
+  #define DGUS_LCD_UI_HIPRECY 1
+#elif DGUS_UI_IS(MKS)
+  #define DGUS_LCD_UI_MKS 1
+#elif DGUS_UI_IS(RELOADED)
+  #define DGUS_LCD_UI_RELOADED 1
+#elif DGUS_UI_IS(IA_CREALITY)
+  #define DGUS_LCD_UI_IA_CREALITY 1
+#endif
+
 /**
  * General Flags that may be set below by specific LCDs
  *
@@ -137,6 +152,7 @@
   #define DOGLCD
   #define IS_U8GLIB_ST7920 1
   #define IS_ULTIPANEL 1
+  #define ENCODER_PULSES_PER_STEP 2
 
 #elif ENABLED(MKS_12864OLED)
 
@@ -308,7 +324,7 @@
   #define IS_ULTIPANEL 1
 #endif
 
-// TFT Compatibility
+// TFT Legacy Compatibility
 #if ANY(FSMC_GRAPHICAL_TFT, SPI_GRAPHICAL_TFT, TFT_320x240, TFT_480x320, TFT_320x240_SPI, TFT_480x320_SPI, TFT_LVGL_UI_FSMC, TFT_LVGL_UI_SPI)
   #define IS_LEGACY_TFT 1
   #define TFT_GENERIC
@@ -461,12 +477,11 @@
 #endif
 
 // Aliases for LCD features
-#if ANY(DGUS_LCD_UI_ORIGIN, DGUS_LCD_UI_FYSETC, DGUS_LCD_UI_HIPRECY, DGUS_LCD_UI_MKS)
-  #define HAS_DGUS_LCD_CLASSIC 1
-#endif
-
-#if EITHER(HAS_DGUS_LCD_CLASSIC, DGUS_LCD_UI_RELOADED)
+#if !DGUS_UI_IS(NONE)
   #define HAS_DGUS_LCD 1
+  #if DGUS_UI_IS(ORIGIN, FYSETC, HIPRECY, MKS)
+    #define HAS_DGUS_LCD_CLASSIC 1
+  #endif
 #endif
 
 // Extensible UI serial touch screens. (See src/lcd/extui)
@@ -527,10 +542,6 @@
 
 #if ANY(HAS_MARLINUI_MENU, EXTENSIBLE_UI, HAS_DWIN_E3V2)
   #define HAS_MANUAL_MOVE_MENU 1
-#endif
-
-#if ANY(HAS_MARLINUI_U8GLIB, EXTENSIBLE_UI, HAS_MARLINUI_HD44780, IS_TFTGLCD_PANEL, IS_DWIN_MARLINUI, DWIN_CREALITY_LCD_JYERSUI)
-  #define CAN_SHOW_REMAINING_TIME 1
 #endif
 
 #if HAS_MARLINUI_U8GLIB
@@ -994,7 +1005,7 @@
  *  with shared motion and temperature settings.
  *
  * DISTINCT_E is the number of distinguished extruders. By default this
- *  well be 1 which indicates all extruders share the same settings.
+ *  will be 1 which indicates all extruders share the same settings.
  *
  * E_INDEX_N(E) should be used to get the E index of any item that might be
  *  distinguished.
@@ -1024,8 +1035,11 @@
 #endif
 
 // Helper macros for extruder and hotend arrays
-#define EXTRUDER_LOOP() for (int8_t e = 0; e < EXTRUDERS; e++)
-#define HOTEND_LOOP() for (int8_t e = 0; e < HOTENDS; e++)
+#define _EXTRUDER_LOOP(E) for (int8_t E = 0; E < EXTRUDERS; E++)
+#define EXTRUDER_LOOP() _EXTRUDER_LOOP(e)
+#define _HOTEND_LOOP(H) for (int8_t H = 0; H < HOTENDS; H++)
+#define HOTEND_LOOP() _HOTEND_LOOP(e)
+
 #define ARRAY_BY_EXTRUDERS(V...) ARRAY_N(EXTRUDERS, V)
 #define ARRAY_BY_EXTRUDERS1(v1) ARRAY_N_1(EXTRUDERS, v1)
 #define ARRAY_BY_HOTENDS(V...) ARRAY_N(HOTENDS, V)
@@ -1069,20 +1083,6 @@
   #ifndef Z_PROBE_SERVO_NR
     #define Z_PROBE_SERVO_NR 0
   #endif
-  #ifdef DEACTIVATE_SERVOS_AFTER_MOVE
-    #error "BLTOUCH requires DEACTIVATE_SERVOS_AFTER_MOVE to be to disabled. Please update your Configuration.h file."
-  #endif
-
-  // Always disable probe pin inverting for BLTouch
-  #if Z_MIN_PROBE_ENDSTOP_INVERTING
-    #error "BLTOUCH requires Z_MIN_PROBE_ENDSTOP_INVERTING set to false. Please update your Configuration.h file."
-  #endif
-
-  #if ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)
-    #if Z_MIN_ENDSTOP_INVERTING
-      #error "BLTOUCH requires Z_MIN_ENDSTOP_INVERTING set to false. Please update your Configuration.h file."
-    #endif
-  #endif
 #endif
 
 /**
@@ -1101,10 +1101,10 @@
 /**
  * Set flags for any form of bed probe
  */
-#if ANY(TOUCH_MI_PROBE, Z_PROBE_ALLEN_KEY, SOLENOID_PROBE, Z_PROBE_SLED, RACK_AND_PINION_PROBE, SENSORLESS_PROBING, MAGLEV4, MAG_MOUNTED_PROBE)
+#if ANY(TOUCH_MI_PROBE, Z_PROBE_ALLEN_KEY, HAS_Z_SERVO_PROBE, SOLENOID_PROBE, Z_PROBE_SLED, RACK_AND_PINION_PROBE, SENSORLESS_PROBING, MAGLEV4, MAG_MOUNTED_PROBE)
   #define HAS_STOWABLE_PROBE 1
 #endif
-#if ANY(HAS_STOWABLE_PROBE, HAS_Z_SERVO_PROBE, FIX_MOUNTED_PROBE, BD_SENSOR, NOZZLE_AS_PROBE)
+#if ANY(HAS_STOWABLE_PROBE, FIX_MOUNTED_PROBE, BD_SENSOR, NOZZLE_AS_PROBE)
   #define HAS_BED_PROBE 1
 #endif
 
@@ -1208,45 +1208,61 @@
 #elif X_HOME_DIR < 0
   #define X_HOME_TO_MIN 1
 #endif
-#if Y_HOME_DIR > 0
-  #define Y_HOME_TO_MAX 1
-#elif Y_HOME_DIR < 0
-  #define Y_HOME_TO_MIN 1
+#if HAS_Y_AXIS
+  #if Y_HOME_DIR > 0
+    #define Y_HOME_TO_MAX 1
+  #elif Y_HOME_DIR < 0
+    #define Y_HOME_TO_MIN 1
+  #endif
 #endif
-#if Z_HOME_DIR > 0
-  #define Z_HOME_TO_MAX 1
-#elif Z_HOME_DIR < 0
-  #define Z_HOME_TO_MIN 1
+#if HAS_Z_AXIS
+  #if Z_HOME_DIR > 0
+    #define Z_HOME_TO_MAX 1
+  #elif Z_HOME_DIR < 0
+    #define Z_HOME_TO_MIN 1
+  #endif
 #endif
-#if I_HOME_DIR > 0
-  #define I_HOME_TO_MAX 1
-#elif I_HOME_DIR < 0
-  #define I_HOME_TO_MIN 1
+#if HAS_I_AXIS
+  #if I_HOME_DIR > 0
+    #define I_HOME_TO_MAX 1
+  #elif I_HOME_DIR < 0
+    #define I_HOME_TO_MIN 1
+  #endif
 #endif
-#if J_HOME_DIR > 0
-  #define J_HOME_TO_MAX 1
-#elif J_HOME_DIR < 0
-  #define J_HOME_TO_MIN 1
+#if HAS_J_AXIS
+  #if J_HOME_DIR > 0
+    #define J_HOME_TO_MAX 1
+  #elif J_HOME_DIR < 0
+    #define J_HOME_TO_MIN 1
+  #endif
 #endif
-#if K_HOME_DIR > 0
-  #define K_HOME_TO_MAX 1
-#elif K_HOME_DIR < 0
-  #define K_HOME_TO_MIN 1
+#if HAS_K_AXIS
+  #if K_HOME_DIR > 0
+    #define K_HOME_TO_MAX 1
+  #elif K_HOME_DIR < 0
+    #define K_HOME_TO_MIN 1
+  #endif
 #endif
-#if U_HOME_DIR > 0
-  #define U_HOME_TO_MAX 1
-#elif U_HOME_DIR < 0
-  #define U_HOME_TO_MIN 1
+#if HAS_U_AXIS
+  #if U_HOME_DIR > 0
+    #define U_HOME_TO_MAX 1
+  #elif U_HOME_DIR < 0
+    #define U_HOME_TO_MIN 1
+  #endif
 #endif
-#if V_HOME_DIR > 0
-  #define V_HOME_TO_MAX 1
-#elif V_HOME_DIR < 0
-  #define V_HOME_TO_MIN 1
+#if HAS_V_AXIS
+  #if V_HOME_DIR > 0
+    #define V_HOME_TO_MAX 1
+  #elif V_HOME_DIR < 0
+    #define V_HOME_TO_MIN 1
+  #endif
 #endif
-#if W_HOME_DIR > 0
-  #define W_HOME_TO_MAX 1
-#elif W_HOME_DIR < 0
-  #define W_HOME_TO_MIN 1
+#if HAS_W_AXIS
+  #if W_HOME_DIR > 0
+    #define W_HOME_TO_MAX 1
+  #elif W_HOME_DIR < 0
+    #define W_HOME_TO_MIN 1
+  #endif
 #endif
 
 /**
@@ -1282,6 +1298,7 @@
   // Clear probe pin settings when no probe is selected
   #undef Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN
   #undef USE_PROBE_FOR_Z_HOMING
+  #undef Z_MIN_PROBE_REPEATABILITY_TEST
 #endif
 
 #if ENABLED(BELTPRINTER) && !defined(HOME_Y_BEFORE_X)
@@ -1390,7 +1407,7 @@
 #if ANY(MORGAN_SCARA, MP_SCARA, AXEL_TPARA)
   #define IS_SCARA 1
   #define IS_KINEMATIC 1
-#elif EITHER(DELTA, POLARGRAPH)
+#elif ANY(DELTA, POLARGRAPH, POLAR)
   #define IS_KINEMATIC 1
 #else
   #define IS_CARTESIAN 1
@@ -1500,35 +1517,11 @@
   #endif
 #elif ENABLED(TFT_GENERIC)
   #define TFT_DEFAULT_ORIENTATION (TFT_EXCHANGE_XY | TFT_INVERT_X | TFT_INVERT_Y)
-  #if NONE(TFT_RES_320x240, TFT_RES_480x272, TFT_RES_480x320)
+  #if NONE(TFT_RES_320x240, TFT_RES_480x272, TFT_RES_480x320, TFT_RES_1024x600)
     #define TFT_RES_320x240
   #endif
   #if NONE(TFT_INTERFACE_FSMC, TFT_INTERFACE_SPI)
     #define TFT_INTERFACE_SPI
-  #endif
-#endif
-
-#if ENABLED(TFT_RES_320x240)
-  #define TFT_WIDTH  320
-  #define TFT_HEIGHT 240
-  #define GRAPHICAL_TFT_UPSCALE 2
-#elif ENABLED(TFT_RES_480x272)
-  #define TFT_WIDTH  480
-  #define TFT_HEIGHT 272
-  #define GRAPHICAL_TFT_UPSCALE 2
-#elif ENABLED(TFT_RES_480x320)
-  #define TFT_WIDTH  480
-  #define TFT_HEIGHT 320
-  #define GRAPHICAL_TFT_UPSCALE 3
-#elif ENABLED(TFT_RES_1024x600)
-  #define TFT_WIDTH  1024
-  #define TFT_HEIGHT 600
-  #if ENABLED(TOUCH_SCREEN)
-    #define GRAPHICAL_TFT_UPSCALE 6
-    #define TFT_PIXEL_OFFSET_X 120
-  #else
-    #define GRAPHICAL_TFT_UPSCALE 8
-    #define TFT_PIXEL_OFFSET_X 0
   #endif
 #endif
 
@@ -1556,8 +1549,62 @@
   #endif
 #endif
 
+// Set TFT_COLOR_UI_PORTRAIT flag, if needed
+#if defined(TFT_ROTATION) && (HAS_SPI_TFT || HAS_FSMC_TFT || HAS_LTDC_TFT)
+  #define _CMP_TFT_ROTATE_90   90
+  #define _CMP_TFT_ROTATE_270 270
+  #define _CMP_TFT_ROTATE_90_MIRROR_X   90
+  #define _CMP_TFT_ROTATE_90_MIRROR_Y   90
+  #define _CMP_TFT_ROTATE_270_MIRROR_X 270
+  #define _CMP_TFT_ROTATE_270_MIRROR_Y 270
+  #define _ISROT(N) || (_CAT(_CMP_, TFT_ROTATION) == N)
+  #define ISROT(V...) (0 MAP(_ISROT, V))
+
+  #if ISROT(90, 270)
+    #define TFT_COLOR_UI_PORTRAIT 1
+  #endif
+
+  #undef _CMP_TFT_ROTATE_90
+  #undef _CMP_TFT_ROTATE_270
+  #undef _CMP_TFT_ROTATE_90_MIRROR_X
+  #undef _CMP_TFT_ROTATE_90_MIRROR_Y
+  #undef _CMP_TFT_ROTATE_270_MIRROR_X
+  #undef _CMP_TFT_ROTATE_270_MIRROR_Y
+  #undef _ISROT
+  #undef ISROT
+#endif
+
+#if ENABLED(TFT_RES_320x240)
+  #if ENABLED(TFT_COLOR_UI_PORTRAIT)
+    #define TFT_WIDTH  240
+    #define TFT_HEIGHT 320
+  #else
+    #define TFT_WIDTH  320
+    #define TFT_HEIGHT 240
+  #endif
+  #define GRAPHICAL_TFT_UPSCALE 2
+#elif ENABLED(TFT_RES_480x272)
+  #define TFT_WIDTH  480
+  #define TFT_HEIGHT 272
+  #define GRAPHICAL_TFT_UPSCALE 2
+#elif ENABLED(TFT_RES_480x320)
+  #define TFT_WIDTH  480
+  #define TFT_HEIGHT 320
+  #define GRAPHICAL_TFT_UPSCALE 3
+#elif ENABLED(TFT_RES_1024x600)
+  #define TFT_WIDTH  1024
+  #define TFT_HEIGHT 600
+  #if ENABLED(TOUCH_SCREEN)
+    #define GRAPHICAL_TFT_UPSCALE 6
+    #define TFT_PIXEL_OFFSET_X 120
+  #else
+    #define GRAPHICAL_TFT_UPSCALE 8
+    #define TFT_PIXEL_OFFSET_X 0
+  #endif
+#endif
+
 #if ENABLED(TFT_COLOR_UI)
-  #if TFT_HEIGHT == 240
+  #if (TFT_WIDTH == 320 && TFT_HEIGHT == 240) || (TFT_WIDTH == 240 && TFT_HEIGHT == 320)
     #if ENABLED(TFT_INTERFACE_SPI)
       #define TFT_320x240_SPI
     #elif ENABLED(TFT_INTERFACE_FSMC)
@@ -1578,6 +1625,8 @@
   #elif TFT_HEIGHT == 600
     #if ENABLED(TFT_INTERFACE_LTDC)
       #define TFT_1024x600_LTDC
+    #else
+      #define TFT_1024x600_SIM  // "Simulation" - for testing purposes only
     #endif
   #endif
 #endif
@@ -1588,11 +1637,13 @@
   #define HAS_UI_480x320 1
 #elif EITHER(TFT_480x272, TFT_480x272_SPI)
   #define HAS_UI_480x272 1
-#elif defined(TFT_1024x600_LTDC)
+#elif EITHER(TFT_1024x600_LTDC, TFT_1024x600_SIM)
   #define HAS_UI_1024x600 1
 #endif
 #if ANY(HAS_UI_320x240, HAS_UI_480x320, HAS_UI_480x272)
   #define LCD_HEIGHT TERN(TOUCH_SCREEN, 6, 7)   // Fewer lines with touch buttons onscreen
+#elif HAS_UI_240x320
+  #define LCD_HEIGHT TERN(TOUCH_SCREEN, 8, 6)   // Fewer lines with touch buttons onscreen
 #elif HAS_UI_1024x600
   #define LCD_HEIGHT TERN(TOUCH_SCREEN, 12, 13) // Fewer lines with touch buttons onscreen
 #endif
